@@ -75,3 +75,7 @@ class PAHFITParams:
             self.const_profile = np.empty(n_cp, dtype=np.float64)
         self.atten_geom = atten_geom
         self.atten_curve = np.empty(m, dtype=np.float64)
+
+    #def update(self, bounds_low, bounds_high):
+
+    
