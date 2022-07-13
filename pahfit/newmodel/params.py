@@ -2,6 +2,7 @@
 
 import numpy as np
 from const import geometry
+from .numba import using_numba, jitclass, njit, i4, f8
 
 feature_dtype = np.dtype([('const_prof', np.int32), ('nvranges', np.int32)])
 params_dtype = np.dtype([('type', np.int32), ('ind', np.int32)])
@@ -9,10 +10,9 @@ tied_dtype = np.dtype([('ind', np.int32), ('start', np.int32),
                        ('count_num', np.int32), ('count_denom', np.int32),
                        ('sum_num', np.float64), ('sum_denom', np.float64)])
 
-try:
-    from numba import i4, f8    # import the types
-    from numba.experimental import jitclass
 
+if using_numba:
+    # jitclass typing
     feat_spec = dict(starlight=i4, dust_continuum=i4,n_mbb=i4,line=i4,
                      dust_features=i4,attenuation=i4, absorption=i4)
     param_spec = dict(y=f8[:], wavelength=f8[:],
@@ -26,10 +26,11 @@ try:
                       const_profile=f8[:],
                       atten_geom = i4,
                       atten_curve = f8[:])
-except ImportError:
+else:
     param_spec, feat_spec = (None, None)
-    def jitclass(*args, **kwargs):
-        return lambda f: f
+    
+
+
 
 @jitclass(feat_spec)
 class FeatureCount:
@@ -79,3 +80,4 @@ class PAHFITParams:
     #def update(self, bounds_low, bounds_high):
 
     
+@njit 

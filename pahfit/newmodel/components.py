@@ -1,11 +1,11 @@
 """
 pahfit.model.components: Functional Forms for the PAHFIT Model
 """
-
 import numpy as np
 from .const import bb_MJy_sr, hc_k, mbb_lam0, fwhmsig_2, gaussian_power_const, c
+from .numba import pahfit_jit
 
-
+@pahfit_jit
 def blackbody(lam, tau, T):
     """Calculate the blackbody function B_nu(lambda, T).
 
@@ -21,7 +21,7 @@ def blackbody(lam, tau, T):
     """
     return bb_MJy_sr * tau / lam**3 / (np.exp(hc_k / lam / T) - 1.)
 
-
+@pahfit_jit
 def modified_blackbody(lam, tau, T):
     """Calculate modified blackbody.  See blackbody."""
     return blackbody(lam, tau, T) * (mbb_lam0 / lam)**2
@@ -76,7 +76,7 @@ def modified_blackbody(lam, tau, T):
 # and similar values.  On re-population of the Features table, true
 # power is restored.
 # --------------------------------------------------------------------
-
+@pahfit_jit
 def drude(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
     """Calculate the Drude function D_lam(A_nu, lam, lam_0, FWHM).
 
@@ -110,7 +110,7 @@ def drude(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
         P_or_A = amplitude(P_or_A, lam_0, fwhm, drude=True, scaled=scaled)
     return P_or_A * frac_fwhm**2 / ((lam / lam_0 - lam_0 / lam)**2 + frac_fwhm**2)
 
-
+@pahfit_jit
 def gaussian(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
     """Calculate the Gaussian Function G_lam(A_nu, lam, lam_0, FWHM).
     See `drude' for details on the arguments.
@@ -119,7 +119,7 @@ def gaussian(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
         P_or_A = amplitude(P_or_A, lam_0, fwhm, scaled=scaled)
     return P_or_A * np.exp(-(lam - lam_0)**2 * fwhmsig_2 / fwhm**2)
 
-
+@pahfit_jit
 def power(amplitude, lam_0, fwhm, drude=False, scaled=False):
     """Return the power (aka integrated intensity) given the
     amplitude, central wavelength, and FWHM of a Gaussian or Drude
@@ -171,7 +171,7 @@ def power(amplitude, lam_0, fwhm, drude=False, scaled=False):
         P *= c / lam_0
     return P
 
-
+@pahfit_jit
 def amplitude(power, lam_0, fwhm, drude=False, scaled=False):
     """Return the amplitude corresponding to a given "scaled power".
     See `power' for argument definitions.
