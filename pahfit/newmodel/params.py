@@ -55,9 +55,11 @@ class PAHFITParams:
     feature_count: FeatureCount
     
     def __init__(self, m, n, n_feat, n_val, n_param, n_fixed,
-                 n_tied=0, n_tie_groups=0, n_cp=0,
+                 n_tied=0, n_tie_groups=0, n_cp=0, atten=True,
                  atten_geom=geometry.mixed):
         self.feature_count = FeatureCount()
+        if atten:
+            self.feature_count.attenuation = 1
         self.y = np.empty(m, dtype=np.float64)
         self.wavelength = np.empty(m, dtype=np.float64)
         self.bounds_low = np.empty(n, dtype=np.float64)
