@@ -7,7 +7,7 @@ class geometry(IntEnum):
     mixed = 0
     screen = 1
 
-mbb_lam0 = 9.7 # scaling wavlength for modified blackbody (microns)
+mbb_lam0 = 9.7 # scaling wavelength for modified blackbody (microns)
 
 # Constants
 hc_k = 1.4387769e4 # hc/k in micron K

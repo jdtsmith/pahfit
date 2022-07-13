@@ -25,12 +25,13 @@ def _create_param_map(features, spectra, fwhm_func, redshift = None):
       or parameter groups.  See the documentation for information on
       the structure of this table.
 
-    spectra: A single instance or iterable of specutils.Spectrum1D
-      objects to fit.  The canonical "instrument" name for each
-      segment must be encoded in its meta table.  Redshift can also be
-      set (see also redshift, below).
+    spectra: A single instance or an iterable of (potentially
+      wavelength-overlapping) specutils.Spectrum1D objects to fit.
+      The canonical "instrument" name for each segment must be encoded
+      in its meta table.  Redshift can also be set (see also redshift,
+      below).
 
-    fwhm_func: A function of two arguments, providing FWHM information
+    fwhm_func: A function of two arguments, which provides FWHM information
       from the instrument pack:
 
          fwhm = fwhm_func(instrument, observed_frame_wavelength_microns)
@@ -40,12 +41,14 @@ def _create_param_map(features, spectra, fwhm_func, redshift = None):
 
       Note: Normally, line FWHM is considered a detail of the
       instrument pack, and never needs consideration.  If a line's
-      FWHM is provided in advance in the features table (with bounds),
-      it will OVERRIDE the value in the instrument pack.  In that
-      case, it is imperative that only a single spectral segment is
-      being fit.  Upon fit completion, line FWHM will ONLY be updated
-      for output in the features table for any lines whose FWHM was
-      provided in advance (and not fixed).
+      FWHM is provided in advance in the features table (with or
+      without bounds), it will OVERRIDE the value in the instrument
+      pack.  In that case, it is imperative that only a single
+      spectral segment is being fit, or that the resolution is
+      otherwise the same at the line location.  Upon fit completion,
+      line FWHM will ONLY be updated for output in the features table
+      for any lines whose FWHM was provided in advance (and not
+      fixed).
 
     redshift: The unitless redshift (z = delta(lam)/lam_0).  Assumed to be
       0.0 if omitted.  The passed redshift should be accurate to
@@ -65,7 +68,7 @@ def _create_param_map(features, spectra, fwhm_func, redshift = None):
     of integers/doubles.  See the documentation for details on the
     various param_map arrays.
 
-    Note: it is possible to /re-use/ param_map between fits, assuming
+    Note: it is possible to /re-use/ a param_map object between fits, assuming
     none of the model details have changed.
 
     """

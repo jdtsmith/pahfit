@@ -21,6 +21,7 @@ def blackbody(lam, tau, T):
     """
     return bb_MJy_sr * tau / lam**3 / (np.exp(hc_k / lam / T) - 1.)
 
+
 def modified_blackbody(lam, tau, T):
     """Calculate modified blackbody.  See blackbody."""
     return blackbody(lam, tau, T) * (mbb_lam0 / lam)**2
