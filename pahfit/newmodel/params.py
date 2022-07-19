@@ -2,7 +2,9 @@
 
 import numpy as np
 from const import geometry
-from .numba import using_numba, jitclass, njit, i4, f8
+from pahfit.errors import PAHFITModelError
+from pahfit.util import bounded_is_fixed, bounded_is_missing
+from .pfnumba import using_numba, pahfit_jit, jitclass
 
 feature_dtype = np.dtype([('const_prof', np.int32), ('nvranges', np.int32)])
 params_dtype = np.dtype([('type', np.int32), ('ind', np.int32)])

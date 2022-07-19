@@ -3,7 +3,7 @@ pahfit.model.components: Functional Forms for the PAHFIT Model
 """
 import numpy as np
 from .const import bb_MJy_sr, hc_k, mbb_lam0, fwhmsig_2, gaussian_power_const, c
-from .numba import pahfit_jit
+from .pfnumba import pahfit_jit
 
 @pahfit_jit
 def blackbody(lam, tau, T):
