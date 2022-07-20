@@ -2,6 +2,17 @@
 from enum import IntEnum
 import numpy as np
 
+# Validity range multipliers (each side)
+
+
+# integral_(-2.25 2 (σ sqrt(2 log(2))))^(2.25 2 (σ sqrt(2 log(2)))) e^(-x^2/(2 σ^2))/(sqrt(2 π) σ) dx =
+#   erf(4.5 sqrt(log(2))) ≈ 1.16857... × 10^-7
+validity_gaussian_fwhms = 2.25 # = 5.3 sigma
+
+
+# Note: Drude's have enough power outside of 1-100um that they do not have a validity range
+# validity_drude_fwhms = 50
+
 # Attenuation/absorption geometry type
 class geometry(IntEnum):
     mixed = 0
