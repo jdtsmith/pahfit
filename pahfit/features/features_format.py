@@ -41,9 +41,6 @@ class BoundedMaskedColumn(MaskedColumn):
         """
         return bounded_is_fixed(self)
     
-    def is_fixed(self):
-        return ma.getmask(self)[:, 1:].all(1)
-
 
 class BoundedParTableFormatter(TableFormatter):
     """Format bounded parameters.  Bounded parameters are 3-field
