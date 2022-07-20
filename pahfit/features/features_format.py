@@ -12,14 +12,16 @@ def fmt_func(fmt):
         if ma.is_masked(v[0]):
             return "  <n/a>  "
         if ma.is_masked(v[1]):
-            return f'{v[0]:{fmt}} (Fixed)'
-        return f'{v[0]:{fmt}} ({v[1]:{fmt}}, {v[2]:{fmt}})'
+            return f"{v[0]:{fmt}} (Fixed)"
+        return f"{v[0]:{fmt}} ({v[1]:{fmt}}, {v[2]:{fmt}})"
+
     return _fmt
 
 class BoundedMaskedColumn(MaskedColumn):
     """Masked column which groups rows into a single item for formatting.
     To be set as Table's `MaskedColumn'.
     """
+
     _omit_shape = False
 
     @property
@@ -39,6 +41,10 @@ class BoundedMaskedColumn(MaskedColumn):
         """
         return bounded_is_fixed(self)
     
+    def is_fixed(self):
+        return ma.getmask(self)[:, 1:].all(1)
+
+
 class BoundedParTableFormatter(TableFormatter):
     """Format bounded parameters.  Bounded parameters are 3-field
     arrays, corresponding to 'value', 'min', and 'max'.  To be set as
