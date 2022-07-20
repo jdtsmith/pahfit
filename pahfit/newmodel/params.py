@@ -203,7 +203,7 @@ class PAHFITParamsWrapper:
 
             off += n
 
-        #feat_by_kind = {v[0]['kind']: v for v in features.group_by('kind').groups}
+        fk = {v[0]['kind']: v for v in features.group_by('kind').groups}
 
         # TBD: Constraints
         # constraints = features.meta.get('constraints')
@@ -214,15 +214,21 @@ class PAHFITParamsWrapper:
         params = []
         bounds_low = []; bounds_high = []
         count = {}
+
+        # Lines
+        lw = fk['line']['wavelength']
+        
+        
+        
         
         for f in features:
             count[f["kind"]] += 1
 
-            # Validity Ranges
-            if f["kind"] == "dust_feature" or f["kind"] == "line":
+            # Validity Ranges (lines only)
+            if f["kind"] == "line":
                 rest_wav = f['wavelength'][0]
-                v = self._feature_validity(f["wavelength"], f["fwhm"],
-                                           drude=f["kind"] == "dust_feature")
+                v = self._line_feature_validity(f["wavelength"], f["fwhm"])
+                                          
                 nv = len(v)//2
                 if f["kind"] == "line": # Fork the line into multiple copies
                     for (ins,rng) in v:

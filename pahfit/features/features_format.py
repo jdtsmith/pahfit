@@ -23,7 +23,7 @@ class BoundedMaskedColumn(MaskedColumn):
     """
 
     _omit_shape = False
-
+    
     @property
     def shape(self):
         sh = super().shape
