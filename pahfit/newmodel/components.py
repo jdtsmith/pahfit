@@ -5,6 +5,7 @@ import numpy as np
 from .const import bb_MJy_sr, hc_k, mbb_lam0, fwhmsig_2, gaussian_power_const, c
 from .pfnumba import pahfit_jit
 
+
 @pahfit_jit
 def blackbody(lam, tau, T):
     """Calculate the blackbody function B_nu(lambda, T).
@@ -15,11 +16,11 @@ def blackbody(lam, tau, T):
 
     tau: The opacity/amplitude of the blackbody.  Unitless if spectra
       are in MJy/sr.
-    
-    T: BB temperature in K.
 
+    T: BB temperature in K.
     """
     return bb_MJy_sr * tau / lam**3 / (np.exp(hc_k / lam / T) - 1.)
+
 
 @pahfit_jit
 def modified_blackbody(lam, tau, T):
@@ -29,15 +30,15 @@ def modified_blackbody(lam, tau, T):
 # --------------------------------------------------------------------
 #   A NOTE ON INTEGRATED INTENSITY/POWER OF GAUSSIAN/DRUDE PROFILES
 #
-# Because of the IR convention of mixed-optical-radio-units,
+# Because of the IR convention of mixed-optical+radio-units,
 # i.e. f_nu(lambda), there are some practical considerations related
 # to integrals over Gaussian and Drude profiles.
 #
 # These two model components have finite widths which are expressed in
 # real wavelength units (microns).  As a result, both are naturally
 # expressed as a function of wavelength.  Their normalizing amplitudes
-# A must then, necessarily, be given *per unit wavelength* (A_lam), so
-# that integrals of the features over wavelength yield no residual
+# (A) must then, necessarily, be given *per unit wavelength* (A_lam),
+# so that integrals of the features over wavelength yield no residual
 # wavelength unit dependence (e.g. from W/m^2/micron -> W/m^2).
 
 # The full integrated "power", P, of the Drude and Gaussian over
@@ -51,7 +52,7 @@ def modified_blackbody(lam, tau, T):
 #
 # But there is one more important detail.  During the fit, amplitudes
 # A are varied so as to match an implicit *f_nu* comparison spectrum
-# (due to the mixed unit convention).  The fitted amplitude is
+# (due to the mixed IR unit convention).  The fitted amplitude is
 # therefore of the A_nu variety.  Since:
 #
 #  A_nu dnu = A_lam dlam => A_lam = -A_nu c/lam^2
@@ -72,10 +73,12 @@ def modified_blackbody(lam, tau, T):
 #
 #   SP = P * lam_0/c
 #
-# Scaled power has identical to the (f_nu flavored) input spectrum,
-# and similar values.  On re-population of the Features table, true
+# Scaled power has identical units to the (f_nu flavored) input
+# spectrum, and similar values.  On output of fitting results, true
 # power is restored.
 # --------------------------------------------------------------------
+
+
 @pahfit_jit
 def drude(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
     """Calculate the Drude function D_lam(A_nu, lam, lam_0, FWHM).
@@ -110,6 +113,7 @@ def drude(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
         P_or_A = amplitude(P_or_A, lam_0, fwhm, drude=True, scaled=scaled)
     return P_or_A * frac_fwhm**2 / ((lam / lam_0 - lam_0 / lam)**2 + frac_fwhm**2)
 
+
 @pahfit_jit
 def gaussian(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
     """Calculate the Gaussian Function G_lam(A_nu, lam, lam_0, FWHM).
@@ -118,6 +122,7 @@ def gaussian(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
     if not amp:
         P_or_A = amplitude(P_or_A, lam_0, fwhm, scaled=scaled)
     return P_or_A * np.exp(-(lam - lam_0)**2 * fwhmsig_2 / fwhm**2)
+
 
 @pahfit_jit
 def power(amplitude, lam_0, fwhm, drude=False, scaled=False):
@@ -170,6 +175,7 @@ def power(amplitude, lam_0, fwhm, drude=False, scaled=False):
     if not scaled:
         P *= c / lam_0
     return P
+
 
 @pahfit_jit
 def amplitude(power, lam_0, fwhm, drude=False, scaled=False):

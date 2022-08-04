@@ -95,7 +95,7 @@ class PAHFITParamsWrapper:
     def __init__(self,features, spectra, fwhm_func, redshift = None):
         """Create and return the internal parameter map, which provides
         all the auxiliary parameter and constraint information needed for
-        efficient yet flexible calculation of the PAHFIT model function.
+        efficient and flexible calculation of the PAHFIT model function.
 
         Arguments:
         ----------
@@ -189,7 +189,7 @@ class PAHFITParamsWrapper:
             f = sp.flux
             f_unc = sp.uncertainty
             if f_unc is None:
-                raise PAHFITModelError(f"Flux uncertainty missing: {ins}") 
+                raise PAHFITModelError(f"Flux uncertainty required: {ins}") 
 
             # De-redshift
             if not z == 0.0:

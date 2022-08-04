@@ -3,7 +3,6 @@ PAHFIT optimized model function
 """
 
 import numpy as np
-
 from .components import blackbody, drude, gaussian, power, amplitude
 
 # * Parameter Setup
@@ -34,5 +33,6 @@ def pahfit_function(params, param_map):
     """
     
     
+
 
     
