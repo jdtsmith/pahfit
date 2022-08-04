@@ -203,20 +203,26 @@ class PAHFITParamsWrapper:
 
             off += n
 
+        # ** Parse all features
         fk = {v[0]['kind']: v for v in features.group_by('kind').groups}
 
-        # TBD: Constraints
-        # constraints = features.meta.get('constraints')
-
-        # ** Features
         feats = []
         validity = []
         params = []
         bounds_low = []; bounds_high = []
-        count = {}
-
-        # Lines
+        feature_count = {}
+        
+        # *** Lines
         lw = fk['line']['wavelength']
+
+        # loop through all lines, find segments of overlap, pick the
+        # "best/most" overlap segment as primary, add the feature,
+        # then add a "ghost" feature for all other segments it
+        # touches.
+        
+        # *** Starlight
+        T = feat['starlight']['temperature']
+
         
         
         
@@ -254,9 +260,8 @@ class PAHFITParamsWrapper:
 
 
 
-
-
-
+        # TBD: Constraints
+        # constraints = features.meta.get('constraints')
 
         if constraints:
             ties = []
@@ -267,8 +272,6 @@ class PAHFITParamsWrapper:
 
 
 
-        # Starlight
-        T = feat['starlight']['temperature']
 
 
 
