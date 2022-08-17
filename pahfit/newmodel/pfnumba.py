@@ -4,7 +4,7 @@ pahfit_jit/jitclass as function/class decorators.
 """
 # pyright: reportUnusedVariable=false
 
-__all__ = ['pahfit_jit', 'jitclass']
+__all__ = ['pahfit_jit', 'jitclass', 'using_numba']
 from ..config import USE_NUMBA
 
 try:
@@ -17,10 +17,11 @@ try:
         return jit(*args, **kwargs, nopython=True, cache=True)
 except (ImportError, NotImplementedError):
     using_numba = False
+
     def noop(*args, **kwargs):
         if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
-            return args[0] # simple decorator: return the function as is
+            return args[0]  # simple decorator: return the function as is
         else:
-            return lambda f: f # decorator with arguments: ignore them!
+            return lambda f: f  # decorator with arguments: ignore them!
     pahfit_jit = noop
     jitclass = noop

@@ -6,7 +6,7 @@ import numpy as np
 from const import geometry
 from pahfit.errors import PAHFITModelError
 from pahfit.util import bounded_is_fixed, bounded_is_missing
-from .pfnumba import using_numba, pahfit_jit, jitclass
+from .pfnumba import jitclass, using_numba
 
 feature_dtype = np.dtype([('const_prof', np.int32), ('nvranges', np.int32)])
 params_dtype = np.dtype([('type', np.int32), ('ind', np.int32)])
@@ -16,7 +16,7 @@ tied_dtype = np.dtype([('ind', np.int32), ('start', np.int32),
 
 
 if using_numba:
-    # jitclass typing
+    # setup jitclass typing
     from numba import i4, f8, from_dtype
     feat_spec = dict(starlight=i4, dust_continuum=i4,n_mbb=i4,line=i4,
                      dust_features=i4,attenuation=i4, absorption=i4)
@@ -52,7 +52,6 @@ class PAHFITParams:
     function for dynamical model evaluation.  Supports independent and
     fixed features, validity ranges, parameter bounds, and various
     types of feature ties.
-
     """
     
     feature_count: FeatureCount
@@ -74,7 +73,7 @@ class PAHFITParams:
         self.params = np.empty(n_param, dtype=params_dtype)   # P-list
         self.fixed = np.empty(n_fixed, dtype=np.int32)        # X-list
 
-        # Constraintes
+        # Constraints
         if n_tied>0:
             self.tied = np.empty(n_param, dtype=tied_dtype)   # T-list
             self.tie_groups = np.empty(n_tie_groups, dtype=np.int32) # G-list
@@ -132,12 +131,12 @@ class PAHFITParamsWrapper:
           for any lines whose FWHM was provided in advance (and not
           fixed).
 
-        redshift: The unitless redshift (z = delta(lam)/lam_0).  Assumed
-          to be 0.0 if omitted.  The passed redshift should be accurate to
-          within a small fraction of the finest spectral resolution
-          element in the passed collection of spectra.  Note that any
-          passed redshift overrides the redshift set in individual
-          spectra.
+        redshift: The unitless redshift (z = delta(lam)/lam_0).
+          Assumed to be 0.0 if omitted.  The passed redshift should be
+          accurate to within a small fraction of the finest spectral
+          resolution element in the passed collection of spectra.
+          Note that any redshift provided in individual spectra
+          overrides the redshift (if any) passed via this argument.
 
         Returns:
         --------
