@@ -13,8 +13,9 @@ try:
     from numba import jit
     from numba.experimental import jitclass
     using_numba = True
+
     def pahfit_jit(*args, **kwargs):
-        return jit(*args, **kwargs, nopython=True, cache=True)
+        return jit(*args, **kwargs, nopython=True, cache=True, parallel=True)
 except (ImportError, NotImplementedError):
     using_numba = False
 
