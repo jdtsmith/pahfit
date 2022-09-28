@@ -6,9 +6,10 @@
 import numpy as np
 from const import geometry
 from pahfit.features import Features
+from pahfit.features.util import (bounded_is_fixed, bounded_is_missing,
+                                  bounded_min, bounded_max)
 from pahfit.packs.instrument import fwhm, within_segment, check_range
 from pahfit.errors import PAHFITModelError
-from pahfit.util import bounded_is_fixed, bounded_is_missing, bounded_min, bounded_max
 from .pfnumba import jitclass, pahfit_jit, using_numba
 from .const import validity_gaussian_fwhms
 
@@ -55,9 +56,9 @@ class FeatureCount:
 
 @jitclass(_param_spec)
 class PAHFITParams:
-    """The PAHFIT parameter class.  An object of this class can be
-    used internally by pahfit.model in the scipy.least_square model
-    function for dynamical model evaluation.  Supports independent and
+    """The PAHFIT parameter class.  An object of this class is used
+    internally by pahfit.model in the scipy.least_square model
+    function for dynamic model evaluation.  Supports independent and
     fixed features, validity ranges, parameter bounds, and various
     types of feature ties.
     """
@@ -350,6 +351,8 @@ def build_params(features, spectra, fwhm_func, redshift = None):
     # Features by kind
     fk = {v[0]['kind']: v for v in features.group_by('kind').groups}
 
+    # cheat sheet: 
+    
     # feats = []
     # validity = []
     # params = []
@@ -357,10 +360,9 @@ def build_params(features, spectra, fwhm_func, redshift = None):
     # feature_count = {}
 
     # Starlight
+    T = fk['starlight']['temperature']
 
-    
-    T = feat['starlight']['temperature']
-
+    # hand N params
 
     
     # *** Lines
