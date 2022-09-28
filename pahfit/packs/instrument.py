@@ -303,11 +303,12 @@ def within_segment(wave_micron, segments, fwhm_near=None, wave_bounds=None):
 
     Arguments:
     ----------
-      segment: The segment name or list of names, potentially
+      segments: The segment name or list of names, potentially
         including glob chars.  See `pack_element'.
 
-      wave_micron: The observed-frame (instrument-relative) wavelength
-        in microns, as a scalar or numpy array of any shape.
+      wave_micron: The observed-frame (instrument-relative)
+        wavelengths of interest, in microns, as a scalar or numpy
+        array of any shape.
 
       fwhm_near (optional, default: None): If not None, mark a
         wavelength in a segment (or set of segments) if it falls

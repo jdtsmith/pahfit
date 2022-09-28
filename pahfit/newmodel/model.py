@@ -1,21 +1,14 @@
 """
-PAHFIT optimized model function
+PAHFIT optimized model function.
 """
 
 import numpy as np
-from .components import blackbody, drude, gaussian, power, amplitude
+from pahfit.newmodel.params import PAHFITParams
+from .components import modified_blackbody, blackbody, drude, gaussian
+from const import geometry
 
-# * Parameter Setup
 
-
-    
-
-def _feature_validity(lam0, fwhm, , drude=False):
-    
-                      
-# ** Model Function
-
-def pahfit_function(params, param_map):
+def pahfit_function(params, param_map: PAHFITParams):
 
     """Calculate and return the PAHFIT model function.
 
@@ -26,13 +19,9 @@ def pahfit_function(params, param_map):
       optimizer.  Note that fixed parameters are not included (see
       FIXED, below).
 
-    PARAM_MAP: An object identifying all the
-      independent, fixed, and tied parameters.  This argument is
-      automatically constructed by _create_param_map.  See the
-      documentation for information on the internal details.
+    PARAM_MAP: A PAHFITParams object identifying all the
+      independent, fixed, and tied parameters.
     """
-    
-    
 
 
     

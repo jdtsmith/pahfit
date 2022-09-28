@@ -1,3 +1,4 @@
+# * pahfit.model.params
 """Parameter structure for PAHFIT model fit"""
 
 # https://numba.discourse.group/t/best-practices-for-complex-structured-input/1406
@@ -56,9 +57,15 @@ class PAHFITParams:
     
     feature_count: FeatureCount
     
-    def __init__(self, m, n, n_feat, n_val, n_param, n_fixed,
+    def __init__(self, m, n, n_feat, n_valid, n_param, n_fixed,
                  n_tied=0, n_tie_groups=0, n_cp=0, atten=True,
                  atten_geom=geometry.mixed):
+        """Create a new PAHFITParams object, passing the number of
+        data values, independent parameters, features, validity
+        ranges, total parameters (included fixed and tied), fixed
+        parameters, ties, tie groups, and constant profile features.
+        Provide information on attenuation and the attenuation model.
+        """
         self.feature_count = FeatureCount()
         if atten:
             self.feature_count.attenuation = 1
