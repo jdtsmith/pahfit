@@ -355,6 +355,13 @@ def build_params(features, spectra, fwhm_func, redshift = None):
     # params = []
     # bounds_low = []; bounds_high = []
     # feature_count = {}
+
+    # Starlight
+
+    
+    T = feat['starlight']['temperature']
+
+
     
     # *** Lines
     lw = fk['line']['wavelength']  # rest-frame
@@ -403,9 +410,6 @@ def build_params(features, spectra, fwhm_func, redshift = None):
     
 
     
-    # *** Starlight
-    T = feat['starlight']['temperature']
-
     
     
     
