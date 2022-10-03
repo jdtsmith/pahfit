@@ -1,4 +1,4 @@
-"""pahfit.util General pahfit.features utility functions."""
+"""pahfit.feature.util: General pahfit.features utility functions."""
 import numpy as np
 import numpy.ma as ma
 
