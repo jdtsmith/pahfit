@@ -5,7 +5,8 @@
 import numpy.ma as ma
 from astropy.table import MaskedColumn
 from astropy.table.pprint import TableFormatter
-from pahfit.util import bounded_is_fixed, bounded_is_missing
+from .util import bounded_is_fixed, bounded_is_missing
+
 
 def fmt_func(fmt):
     def _fmt(v):
@@ -17,13 +18,14 @@ def fmt_func(fmt):
 
     return _fmt
 
+
 class BoundedMaskedColumn(MaskedColumn):
     """Masked column which groups rows into a single item for formatting.
     To be set as Table's `MaskedColumn'.
     """
 
     _omit_shape = False
-    
+
     @property
     def shape(self):
         sh = super().shape
@@ -34,20 +36,20 @@ class BoundedMaskedColumn(MaskedColumn):
         column are missing (i.e. their value is masked).
         """
         return bounded_is_missing(self)
-        
+
     def is_fixed(self):
         """Return a boolean array indicating which elements of the
         column are fixed (i.e. they have both bounds masked).
         """
         return bounded_is_fixed(self)
-    
+
 
 class BoundedParTableFormatter(TableFormatter):
     """Format bounded parameters.  Bounded parameters are 3-field
     arrays, corresponding to 'value', 'min', and 'max'.  To be set as
     Table's `TableFormatter'.
     """
-    
+
     def _pformat_table(self, table, *args, **kwargs):
         bpcols = []
         try:

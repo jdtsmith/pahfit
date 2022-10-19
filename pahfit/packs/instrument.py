@@ -154,7 +154,7 @@ def resolution(segment, wave_micron, fwhm_near=0.0, as_bounded=False):
 
     The resolution (wavelength divided by full-width at half maxima)
     of unresolved line spread functions at the relevant wavelength(s),
-    either as a scalar or array (if only one segment applied and
+    either as a scalar or array (if only one segment applies and
     `as_bounded' is not True) or as a masked array of 3 element tuples
     specifying:
 
@@ -187,7 +187,7 @@ def resolution(segment, wave_micron, fwhm_near=0.0, as_bounded=False):
     out[..., 0] = np.mean(res, 0)
 
     multi = np.count_nonzero(res, 0) > 1  # waves matching more than one segment
-    if np.count_nonzero(multi) > 0:  # add lower/upper bounds
+    if np.count_nonzero(multi) > 0:       # add lower/upper bounds for multi-segment lines
         out[multi, 1] = np.min(res[:, multi], 0)
         out[multi, 2] = np.max(res[:, multi], 0)
 
@@ -313,8 +313,8 @@ def within_segment(wave_micron, segments, fwhm_near=None, wave_bounds=None):
       fwhm_near (optional, default: None): If not None, mark a
         wavelength in a segment (or set of segments) if it falls
         within `fwhm_near'*FWHM of any segment's end.  Note that, to
-        avoid extrapolation, the FWHM of interest is calculated at the
-        segment endpoint.
+        avoid extrapolation, the FWHM for "slightly out of bounds"
+        wavelengths is takens from the segment endpoint.
 
       wave_bounds (optional, default: None): The min and max observed
         wavelength bounds in microns in the observed spectrum or
@@ -331,7 +331,6 @@ def within_segment(wave_micron, segments, fwhm_near=None, wave_bounds=None):
     See Also:
     ---------
     check_range
-
     """
     res = []
 
