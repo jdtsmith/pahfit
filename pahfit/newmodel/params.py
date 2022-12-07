@@ -182,7 +182,7 @@ class PAHFITParams:
         """Increment the feature offset."""
         self.f_off += 1
 
-    def accumulate(self, indep, func, np, attenuation=False):
+    def accumulate(self, indep, func, np, attenuation=False, **kwargs):
         """Accumulate a single model component feature with NP parameters.
 
         Parameters
@@ -242,12 +242,12 @@ class PAHFITParams:
         else:  # must compute fresh
             params = self.retrieve_params(indep, np)
             if nvr == 0:
-                vec += func(self.wavelength, *params)
+                vec += func(self.wavelength, *params, **kwargs)
             else:
                 coff = 0
                 for _ in range(nvr):
                     low, high = self.validity[self.v_off:self.v_off + 2]
-                    vec[low:high] += func(self.wavelength[low:high], *params)
+                    vec[low:high] += func(self.wavelength[low:high], *params, **kwargs)
                     self.v_off += 2
 
     def compute_tie_sums(self, indep):

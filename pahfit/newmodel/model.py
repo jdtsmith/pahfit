@@ -2,12 +2,16 @@
 PAHFIT optimized model object function.
 """
 
-#from typing import ParamSpecKwargs
 import numpy as np
+from warnings import warn
 from const import geometry, param_type, validity_gaussian_fwhms
+from pahfit.packs.instrument import PAHFITWarning, check_range, within_segment
 from .params import PAHFITParams
 from .components import modified_blackbody, blackbody, drude, gaussian
 from .pfnumba import pahfit_jit
+from pahfit.errors import PAHFITModelError
+from pahfit.features import Features
+
 
 @pahfit_jit
 def pahfit_function(params, param_map: PAHFITParams):
@@ -53,7 +57,7 @@ def pahfit_function(params, param_map: PAHFITParams):
 
         # Absorption: add any discrete absorption features with their own parameters
         for _ in range(param_map.feature_count.absorption):
-            param_map.accumulate(params, drude, 3, attenuation=True)
+            param_map.accumulate(params, drude, 3, attenuation=True, amp=True)
 
         if param_map.atten_geom == geometry.mixed:
             param_map.y *= (1.0 - np.exp(-param_map.atten_curve)) / param_map.atten_curve
@@ -252,46 +256,69 @@ class Model:
                 f *= (1. + z)  # Conserve power!
                 f_unc *= (1. + z)
 
-            wavelength[off:off + n] = w
-            flux[off:off + n] = f
-            flux_unc[off:off + n] = f_unc
+            self.wavelength[off:off + n] = w
+            self.flux[off:off + n] = f
+            self.flux_unc[off:off + n] = f_unc
 
             off += n
+        if len(spectra) > 1:
+            zs = [x['z'] for x in self.segments]
+            if not np.allclose(zs, zs[0]):
+                warn(f"Spectral segments have different redshifts:\n\t{zs}", PAHFITWarning)
 
-        # Parse Features Table
-        if not isinstance(features, Features):
-            try:
-                features = Features.read(features)
-            except (FileNotFoundError, AttributeError):
-                raise PAHFITModelError(f"No science pack found for feature table {features}.")
+    def setup(self):
+        """Set up the fit by creating and store a fully populated
+        `PAHFITParams` parameter map.
+        """
+
+        # ## XXX ties are ignored to start
 
         # Group features in table by kind
-        fk = {v[0]['kind']: v for v in features.group_by('kind').groups}
+        fk = {v[0]['kind']: v for v in self.features.group_by('kind').groups}
 
-        # Internal Features data structure: a list of tuples of
-        # dictionaries, each of which corresponds to one feature, like:
-        #   params: {
-        feat_internal = [] dict(features={})
+        # Internal Features data structure:
+        #   features[name]: {'kind': str,
+        #                    'main': feat_rec,
+        #                    'ghosts': None | [feat_rec, ...]}
+        # with
+        #   feat_rec: {'params': [param_rec, ...],
+        #              'const_profile': bool,  # if set, only 
+        #              'valid': None | [(segname, min_ind, max_ind), ...]}
+        # and (n.b. bounded_value determines if fixed or independent)
+        #   param_rec: {'type': str, val: bounded_value}
+        features = {}
 
-        # COUNT all the features
+        # Lines (special, can be trivial-power-tied ghosts)
+        # XXX also for dust_features/absorption
         lw = fk['line']['wavelength']  # lines are special
         inside = None                  # they can be excluded
-        ghosts = np.zeros_like(lw, dtype=int)  # or have ghosts
+        inlines = {}
+        ghosts = {}
 
-        for line in fk['line']:
-            for seg, rec in waves.items():
-                if within_segment(line['wavelength'] * (1. + rec['z']), seg,
-                                  fwhm_near=validity_gaussian_fwhms,
-                                  wave_bounds=rec['bounds']):
+        for seg, rec in self.segments.items():
+            ins = within_segment(lw * (1. + rec['z']), seg,
+                                 fwhm_near=validity_gaussian_fwhms,
+                                 wave_bounds=rec['bounds'])
             if inside is None:
-                inside = ins_new
+                new = inside = ins
             else:
-                ghosts[ins_new & inside] += 1  # line was already in
-                inside |= ins_new
-        if inside is None:
-            n_features = len(features)
-        else:
-            n_features = len(features) - np.count_nonzero(~inside) + ghosts.sum()
+                new = ins & ~inside  # first time seen
+                ghost_features = ins & inside  # line was already in
+                if np.count_nonzero(ghost_features):
+                    if seg not in ghosts:
+                        ghosts[seg] = []
+                    ghosts[seg].append(fk['line'][ghost_features]['name'].tolist())
+
+                inside |= ins
+
+            if np.count_nonzero(new):
+                if seg not in inlines:
+                    inlines[seg] = []
+                inlines[seg].append(fk['line'][new]['name'].tolist())
+                
+                
+
+                
 
         kept_lines = fk['line'][inside]
 
