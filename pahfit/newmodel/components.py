@@ -53,7 +53,9 @@ def modified_blackbody(lam, tau, T):
 # But there is one more important detail.  During the fit, amplitudes
 # A are varied so as to match an implicit *f_nu* comparison spectrum
 # (due to the mixed IR unit convention).  The fitted amplitude is
-# therefore of the A_nu variety.  Since:
+# therefore of the A_nu variety.
+#
+# Since:
 #
 #  A_nu dnu = A_lam dlam => A_lam = -A_nu c/lam^2
 #
@@ -73,7 +75,7 @@ def modified_blackbody(lam, tau, T):
 #
 #   SP = P * lam_0/c
 #
-# Scaled power has identical units to the (f_nu flavored) input
+# Scaled power has identical units to the (f_nu-flavored) input
 # spectrum, and similar values.  On output of fitting results, true
 # power is restored.
 # --------------------------------------------------------------------
@@ -83,30 +85,35 @@ def modified_blackbody(lam, tau, T):
 def drude(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
     """Calculate the Drude function D_lam(A_nu, lam, lam_0, FWHM).
 
-    Arguments:
+    Parameters
     ----------
 
-      lam: Wavelength vector over which to compute the Drude (microns)
+    lam : float
+        Wavelength vector over which to compute the Drude (microns)
 
-      P_or_A: Either power (by default, "scaled") or amplitude (see
+    p_or_a : float
+        Either power (by default, "scaled") or amplitude (see
         `power').
 
-      lam_0: Central wavelength of the feature (microns).
+    lam_0 : float
+        Central wavelength of the feature (microns).
 
-      FWHM: full-width at half maximum of the feature (microns).
+    fwhm : float
+        full-width at half maximum of the feature (microns).
 
-      amp (boolean, optional): Set True if an amplitude is passed
-        instead of scaled power (default: False).
+    amp : bool, optional
+        True if an amplitude is passed instead of scaled power
+        (default: False).
 
-      scaled (boolean, optional): If power is passed, whether it is
-        "scaled power" (see `power'; default: True).
+    scaled : bool, optional
+        If power is passed, whether it is "scaled power" (see `power';
+        default: True).
 
-    Returns:
-    --------
+    Returns
+    -------
 
     A vector array containing the full Drude profile over the input
     wavelengths.
-
     """
     frac_fwhm = fwhm / lam_0
     if not amp:
@@ -117,7 +124,7 @@ def drude(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
 @pahfit_jit
 def gaussian(lam, P_or_A, lam_0, fwhm, amp=False, scaled=True):
     """Calculate the Gaussian Function G_lam(A_nu, lam, lam_0, FWHM).
-    See `drude' for details on the arguments.
+    See `drude` for details on the arguments.
     """
     if not amp:
         P_or_A = amplitude(P_or_A, lam_0, fwhm, scaled=scaled)
@@ -130,46 +137,46 @@ def power(amplitude, lam_0, fwhm, drude=False, scaled=False):
     amplitude, central wavelength, and FWHM of a Gaussian or Drude
     profile.
 
-    Arguments:
+    Parameters
     ----------
 
     amplitude: The amplitude of the feature, in the units of the
-      input spectrum.
+        input spectrum.
 
-    lam_0: The central wavelength (microns).
+    lam_0 : float
+        The central wavelength (microns).
 
-    fwhm: The full-width at half maximum of the feature (microns).
+    fwhm : float
+        The full-width at half maximum of the feature (microns).
 
-    drude (bool, optional): Whether this is a Drude feature (default:
-      False).
+    drude : (bool, optional)  Whether this is a Drude feature (default:
+        False).
 
-    scaled (bool, optional): Whether to return "Scaled Power" (see
-      below, default: False).
+    scaled : bool, optional
+        Whether to return "Scaled Power" (see below, default: False).
 
-    Returns:
+    Returns
+    -------
+
+    power : float
+        Integrated power of the feature (units: ``[amplitude] * Hz``),
+        or scaled power (units: ``[amplitude]``).
+
+    .. note::
+
+           *Scaled Power* is power scaled into the flux density units of
+           the input spectrum (e.g. mJy, MJy/sr, etc.): ``SP = P lam_0/c``
+           An interpretation of scaled power: if a feature has a FWHM
+           similar to its central wavelength, the scaled power is
+           approximately the feature's peak amplitude.  Scaled power
+           is used internally for fitting, so as to avoid large
+           mismatch in numeric scale between powers and feature
+           amplitudes.
+
+    See Also
     --------
 
-    power: Integrated power of the feature (units: [amplitude] * Hz),
-      or scaled power (units: [amplitude]).
-
-    Notes:
-    ------
-
-    Scaled Power is power scaled into the flux density units of the
-    input spectrum (e.g. mJy, MJy/sr, etc.):
-
-      SP = P lam_0/c
-
-    An interpretation of scaled power: if a feature has a FWHM similar
-    to its central wavelength, the scaled power is approximately the
-    feature's peak amplitude.  Scaled power is used internally for
-    fitting, so as to avoid large mismatch in numeric scale between
-    powers and feature amplitudes.
-
-    See Also:
-    ---------
-
-    pahfit.model.amplitude'.
+    amplitude : Convert (scaled) power to amplitude.
     """
     P = amplitude / lam_0 * fwhm / 2 * (np.pi if drude else gaussian_power_const)
     if not scaled:
@@ -179,8 +186,18 @@ def power(amplitude, lam_0, fwhm, drude=False, scaled=False):
 
 @pahfit_jit
 def amplitude(power, lam_0, fwhm, drude=False, scaled=False):
-    """Return the amplitude corresponding to a given "scaled power".
-    See `power' for argument definitions.
+    """Return the amplitude corresponding to a given **scaled power**.
+
+    Returns
+    -------
+
+    amplitude : float
+        Amplitude of the feature in f_nu units.
+
+    See Also
+    --------
+
+    power : power from amplitude; see for parameter definition.
     """
     A = power * lam_0 / fwhm * 2 / (np.pi if drude else gaussian_power_const)
     if not scaled:

@@ -62,114 +62,185 @@ def pahfit_function(params, param_map: PAHFITParams):
 
     return param_map.y
 
+# N.B. The flexibility in the PAHFIT model means the external and
+# internal representations of features and their parameters can grow
+# quite complicated.  A few tips and practical pointers:
+
+#   - the .yaml science pack is a read-only on-disk file format, and
+#     is converted directly to a Features table (descendent of
+#     astropy.table.Table).  The YAML data are "hand-written"
+#     (including by the advanced PAHFIT user).
+
+#   - Features table can be edited on input and are updated on output
+#     with fit results.  They can be created from yaml science pack
+#     input, or saved to and read in from disk (e.g. ecsv format).
+
+#   - There are *two* additional model-internal formats for features:
+#      1. Model._features, a ModelSpec object.  This is a
+#         flexible data structure that can be easily grown and edited
+#         in place.  It is stored between fits.  It serves as an
+#         intermediate representation between a Features table and the
+#         following more efficient internal format.  It is updated
+#         only when new spectra are ingested for fitting with an
+#         existing model.  Otherwise it is re-built for each new Model
+#         object.
+#      2. Model._params, a PAHFITParams object. This is a highly
+#         efficient (numpy structured array-based) format, which is
+#         initialized from the ModelSpec (which knows how to translate
+#         itself).  This can be thought of as operating at an
+#         equivalent layers as astropy's Modeling.CompoundModel
+#         machinery (though much more efficiently).
+
+#   - On output from guess or fit, the Features table is updated from
+#     the independent variable (with the help of ModelSpec, to make
+#     the mapping).
+
+#   - Constant-profile features has only a SINGLE parameter, no matter
+#     the feature's kind: power or tau.
+
+#   - A "ghost" feature is a power-tied feature (e.g. line) which
+#     differs only in its FWHM; all other parameters are mapped back to
+#     the main feature.  Each such ghost should have a validity range
+#     within the segment for which it was created.
+
+#   - Features can have validity over the full (combined) spectrum, or
+#     over one or more validity [start, stop) ranges.  A feature with
+#     more than one validity range is possible (but probably rare).
+#     An example might be a broad feature unaffected by the local
+#     FWHM, which nevertheless has finite coverage.  
+
 
 class Model:
     """XXX Get Docs from orig model.py"""
+    FLOAT_TYPE = np.float64
 
-    def __init__(self, features):
-        """
+    def __init__(self, features: Features,
+                 spectra=None, instruments=None, redshift=None):
+        """Create a new PAHFIT Model.
+
         Parameters
         ----------
 
-        features : :class:`pahfit.features.Features` object or str
-            Either a Features table, or a string specifying one of the
-            default science pack tables to read in as a Features table.
+        features : `Features` or str
+            Either a Features table, or a string specifying the name
+            of one of the default science pack tables distributed with
+            PAHFIT.
 
             The Features table contains information on all (groups of)
             features, their kinds, parameters (including both value and
             bounds), as well as any ties between parameters or parameter
             groups (in its meta-data).  See the documentation for
             information on the structure of this table.
-        """
 
-        pass
+        spectra : `~specutils.Spectrum1D` or iterable, optional
+            A single instance or iterable of Spectrum1D spectral
+            segments to fit, potentially wavelength-overlapping.  The
+            canonical "instrument" name or names applicable for each
+            spectrum should be encoded in each spectral segment's
+            `meta' table dict under the key "instrument".  Redshift
+            can be set either in the Spectrum1D object itself, or, if
+            not set, specified globally with a `redshift` argument;
+            see below.  Note: if `spectra` is omitted, `instruments`
+            must be passed.
 
-
-    def build_params(self, features, spectra, fwhm_func, redshift=None):
-        """Create and store a fully populated :class:PAHFITParams
-        parameter map.
-
-        spectra : :class:`specutils.Spectrum1D` or iterable thereof
-            A single instance or an iterable of (potentially
-            wavelength-overlapping) specutils.Spectrum1D objects to fit.
-            The canonical "instrument" name or names applicable for each
-            spectrum must be encoded in each spectral segment's `meta' table
-            dict under the key "instrument".  Redshift can also be set in
-            the Spectrum1D object, or can be specified with a REDSHIFT
-            argument; see below.
-
-        fwhm_func : function(segment_name, wavelengths)
-            A function of two arguments, which provides FWHM information
-            from the instrument pack:
-
-               fwhm = fwhm_func(instrument_segment, observed_frame_wavelength_microns)
-
-            which returns the fwhm (in microns) based on segment
-            instrument name(s) and the (observed frame) wavelength of
-            the line, in microns.
-
-            Note: Normally, line FWHM is considered a detail of the
-            instrument pack, and never needs consideration.  If a line's
-            FWHM is provided in advance in the features table (with or
-            without bounds), it will OVERRIDE the value in the
-            instrument pack.  Upon fit completion, line FWHM will ONLY
-            be updated for output in the features table for any lines
-            whose FWHM was provided in advance (and not fixed).
+        instruments : str or iterable, optional
+            Instead of setting the "instrument" meta-data, a string or
+            iterable of (iterables of) strings can be passed, and will be used
+            in place of the metadata.
 
         redshift : float, optional
-            The unitless redshift (z = delta(lam)/lam_0).  Assumed to be
+            The unitless redshift (``z = delta(lam)/lam_0``).  Assumed
+            to be 0.0 if omitted.  The passed redshift should be
+            accurate to within a small fraction of the finest spectral
+            resolution element in `spectra`.  Note that any redshift
+            provided within the meta table of individual spectral
+            segments overrides the redshift (if any) passed via this
+            argument.
+
+        See Also
+        --------
+
+        instrument : PAHFIT instrument pack definition.
+        """
+
+        # Parse Features Table
+        if not isinstance(features, Features):
+            try:
+                features = Features.read(features)
+            except (FileNotFoundError, AttributeError):
+                raise PAHFITModelError(f"No science pack found for feature table {features}.")
+        self.features = features
+
+        # Process spectra or instruments
+        if spectra:
+            self.ingest_spectra(spectra, instruments=instruments, redshift=redshift)
+        elif instruments:
+            self.segments = {x: None for x in instruments}  # empty segments, for now
+        else:
+            raise PAHFITModelError("Model requires either spectra or instruments to create.")
+        self.redshift = redshift or 0.0
+
+    def ingest_spectra(self, spectra, instruments=None, redshift=None):
+        """Prepare a set of spectra for fitting.
+
+        Parameters
+        ----------
+
+        spectra : `~specutils.Spectrum1D` spectrum or iterable
+            Spectrum or iterable of spectral segments to fit.
+
+        instruments : str or iterable, optional
+            A (list of) instrument names, each of which can be a
+            string, or an iterable of strings for stitched spectra.
+            This list is only used if `spectra` does not contain
+            `meta['instrument']`, which is preferred.  Its length must
+            correspond to the number of spectral segments passed.
+
+        redshift : float, optional, default: 0.0
+            The unitless redshift (``z = delta(lam)/lam_0``).  Assumed to be
             0.0 if omitted.  The passed redshift should be accurate to
             within a small fraction of the finest spectral resolution
             element in the passed collection of spectra.  Note that any
             redshift provided in individual spectra overrides the redshift
             (if any) passed via this argument.
+        """
 
-        Returns
-        -------
-
-        param_map
-            A populated :class:`PAHFITParams` object, which includes
-            scalars and (structured) numpy arrays.  This structure is an
-            internal implementation detail of the PAHFIT model, and not
-            for external use.  In all cases the arrays are simple 1D
-            arrays, either integer, double floating point, or named
-            structured arrays of integers/doubles.  See the documentation
-            for details on the various param_map arrays.
-
-            Note: it is possible to re-use a param_map object between
-            fits, assuming none of the model/parameter details have
-            changed, other than starting parameter value(s)."""
-
-        # *** Ingest Spectra
+        # XXX Check spec_samples and self.instruments and skip most of this if unchanged.
         if not isinstance(spectra, (tuple, list)):
             spectra = (spectra,)
 
-        spec_samples = sum(len(s.spectral_axis) for s in spectra)
+        self.spec_samples = sum(len(s.spectral_axis) for s in spectra)
 
         # Flux and Wavelength
-        flux = np.empty(spec_samples, dtype=np.float64)
-        flux_unc = np.empty_like(flux)
-        wavelength = np.empty_like(flux)
+        self.flux = np.empty(self.spec_samples, dtype=self.FLOAT_TYPE)
+        self.flux_unc = np.empty_like(self.flux)
+        self.wavelength = np.empty_like(self.flux)
+        self.segments = {}
         off = 0
-        waves = {}
         for i, sp in enumerate(spectra):
             w = sp.spectral_axis.micron
 
             try:
                 ins = sp.meta['instrument']  # can be a list of strings or glob
             except KeyError:
-                raise PAHFITModelError(f"Instrument missing from input spectrum #{i}.")
+                try:
+                    ins = instruments[i]  # type: ignore
+                except (IndexError, TypeError):
+                    raise PAHFITModelError(f"Instrument missing from input spectrum #{i}.")
             n = len(w)
-            bnds = [w[0], w[-1]]  # Assume monotonic, either increasing or decreasing
-            if bnds[0] > bnds[1]:
-                bnds = bnds.reverse()
 
-            check_range(bnds, ins)  # Check for compatibility between passed wave-range and instrument
+            # Check compatibility between spectral wave-bounds and instrument
+            bounds = [w[0], w[-1]]  # Assume monotonic, either increasing or decreasing
+            if bounds[0] > bounds[1]:
+                bounds = bounds.reverse()
+            check_range(bounds, ins)
+
             z = sp.spectral_axis.redshift.value if redshift is None else redshift
-            if ins in waves:
+
+            if ins in self.segments:
                 raise PAHFITModelError(f"Instrument present in more than one input spectrum: {ins}")
 
-            waves[ins] = dict(obs_wave=w, start=off, z=z, bounds=bnds)
+            self.segments[ins] = dict(obs_wave=w, start=off, z=z, bounds=bounds)
             f = sp.flux
             f_unc = sp.uncertainty
             if f_unc is None:

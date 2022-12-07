@@ -57,33 +57,55 @@ class FeatureCount:
 
 @jitclass(_param_spec)
 class PAHFITParams:
-    """The PAHFIT parameter class.  An object of this class is used
-    internally by pahfit.model in the scipy.least_square model
-    function for dynamic model evaluation.  Supports independent and
-    fixed features, validity ranges, parameter bounds, and various
-    types of feature ties (aka constraints), with and without
-    renormalization.
+    """The PAHFIT parameter class.
 
+    An object of this class is used internally by pahfit.model in the
+    scipy.least_square model function for efficient dynamic model
+    evaluation.  Supports independent (varying/bounded) and fixed
+    features, validity ranges, parameter bounds, and various types of
+    feature ties (aka constraints), with and without renormalization.
 
-    :class:PAHFITParams provides all the auxiliary parameter and
-    constraint information needed for efficient and flexible
-    calculation and optimization of the PAHFIT model.
+    A populated `PAHFITParams` object includes scalars and
+    (structured) numpy arrays.  This structure is an internal
+    implementation detail of the PAHFIT model, and not for external
+    use.  In all cases the arrays are simple 1D arrays, either
+    integer, double floating point, or named structured arrays of
+    integers/doubles.  See the documentation for details on the
+    various ``param_map`` arrays.
+
+    Note: it is possible to re-use a ``PAHFITParams`` object between
+    fits, assuming none of the model/parameter details have changed,
+    other than starting parameter value(s).
+
+    .. note:: Normally, line FWHM is considered a detail of the
+       instrument pack, and never needs consideration.  But if a
+       line's FWHM is provided in advance in the features table (with
+       or without bounds), it will OVERRIDE the value in the
+       instrument pack.  Upon fit completion, line FWHM will ONLY be
+       updated for output in the features table for any lines whose
+       FWHM was varied during the fit, due either to having been
+       provided in advance (not fixed), or because FWHM was
+       automatically set to vary due falling in the overlap region of
+       stitched spectra.
     """
     feature_count: FeatureCount
 
     def __init__(self, m, n, n_feat, n_valid, n_param, n_fixed,
                  n_tied=0, n_tie_groups=0, n_cp=0, atten=True,
                  atten_geom=geometry.mixed):
-        """Create a new PAHFITParams object, passing the number of
-        data values, independent parameters, features, validity
-        ranges, total parameters (included fixed and tied), fixed
-        parameters, ties, tie groups, and constant profile features.
-        Provide information on attenuation and the attenuation model.
+        """Create a new PAHFITParams object.
+
+        Pass the number of data values, independent parameters,
+        features, validity ranges, total parameters (included fixed
+        and tied), fixed parameters, ties, tie groups, and constant
+        profile features.  Provide information on attenuation and the
+        attenuation model.
         """
         self.feature_count = FeatureCount()
 
         self.n_wav = m
 
+        # XXX pre-allocate all this outside of PAHFIT params?
         self.y = np.empty(m, dtype=np.float64)
         self.wavelength = np.empty(m, dtype=np.float64)
         self.bounds_low = np.empty(n, dtype=np.float64)
@@ -109,46 +131,36 @@ class PAHFITParams:
             self.atten_geom = atten_geom
             self.atten_curve = np.empty(m, dtype=np.float64)  # A-list
 
-    def get_par(self, ind, indep):
-        """Return the fixed or independent parameter value of index IND."""
-        par = self.params[ind]
-        if par['type'] == TYPE_FIXED:
-            return self.fixed[par['ind']]
-        elif par['type'] == TYPE_INDEP:
-            return indep[par['ind']]
-
-    def compute_tie_sums(self, indep):
-        """Recompute numerator and denominator sums for all
-        non-trivial ties.  Note that one-to-many ratio constraints
-        only require (or use) a denominator sum.
-        """
-        for i in range(self.tied.size):
-            start = self.tied[i]['start']
-            if self.tied[i]['count_num'] > 1:
-                self.tied[i]['sum_num'] = 0.0
-                for p in range(start, start + self.tied[i]['count_num']):
-                    self.tied[i]['sum_num'] += self.get_par(self.tie_groups[p], indep)
-                start += self.tied[i]['count_num']  # Move on to denominators
-            self.tied[i]['sum_denom'] = 0.0
-            for p in range(start, start + self.tied[i]['count_denom']):
-                self.tied[i]['sum_denom'] += self.get_par(self.tie_groups[p], indep)
-
     def reset(self, indep):
         """Reset the internal state for a new calculation."""
         self.y[:] = 0.0
         self.compute_tie_sums(indep)
         self.f_off, self.p_off, self.v_off = 0, 0, 0
 
-    def retrieve_param(self, indep):
+    def get_par(self, ind, indep) -> np.float64:
+        """Return the fixed or independent parameter value of index IND.
+        Not for use with type >= 0 (i.e. TIED parameters).
+        """
+        par = self.params[ind]
+        if par['type'] == param_type.fixed:
+            return self.fixed[par['ind']]
+        else:
+            return indep[par['ind']]
+
+    def retrieve_param(self, indep) -> np.float64:
         """Return the value of the next parameter on the parameter list.
 
         Parameters
         ----------
 
-        INDEP: Current independent parameter vector.
+        indep : array_like
+            Current independent parameter vector.
+
+        Notes
+        -----
 
         Retrieved parameters can be fixed, independent (varying), or
-        tied via a ratio to some other parameter value(s).  They may
+        tied via a **ratio** to some other parameter value(s).  They may
         also be subject to numerator normalization for many-to-one or
         many-to-many ties.
         """
@@ -157,7 +169,7 @@ class PAHFITParams:
             val = self.get_par(self.p_off, indep)
         else:  # Non-trivial parameter tie, must compute
             tnum_off = par['type']  # type is overloaded as a numerator offset
-            trec = self.tied[par['ind']]  # index is into the T-vec
+            trec = self.tied[par['ind']]  # index is into the T-list
             ratio = self.get_par(trec['ind'], indep)  # the parameter is the *ratio*
             val = ratio * trec['sum_denom']  # simple ratio tie
             if trec['count_num'] > 1:  # band-sum many-to-* tie: renormalize
@@ -171,6 +183,7 @@ class PAHFITParams:
         return tuple(self.retrieve_param(indep) for _ in range(np))
 
     def next_feature(self):
+        """Increment the feature offset."""
         self.f_off += 1
 
     def accumulate(self, indep, func, np, attenuation=False):
@@ -179,21 +192,35 @@ class PAHFITParams:
         Parameters
         ----------
 
-        INDEP: The independent parameter vector.
+        indep : array_like
+            The independent parameter vector.
 
-        FUNC: a function of wavelength and NP additional arguments
-          which returns a model component vector (e.g. blackbody).
+        func : callable(wavelength, p_1, p_2, ..., p_np)
+            A function of wavelength and NP additional arguments which
+            returns a model component vector (e.g. blackbody).
 
-        NP: the number of additional parameters FUNC takes.  If the
-          feature is marked as a "constant profile" features, this is
-          ignored, and a single parameter (the current amplitude) is
-          used.
+        np : int
+            The number of additional parameters FUNC takes.  If the
+            feature is marked as "constant profile", np is ignored,
+            and a single parameter (the current amplitude) is used.
 
-        By default, accumulates the new model component into the
-        (model) y-vector, unless ATTENUATION is True, in which case
-        the attenuation-vector is used as the accumulation target.
-        Increments the parameter and feature offsets.  Accumulates
-        only over the valid range(s), if validity is set.
+        attenuation : bool, optional, default: False
+
+            By default, accumulates the new model component into the
+            (model) y-vector, unless ``attenuation`` is True, in which
+            case the attenuation-vector is used as the accumulation
+            target.
+
+        **kwargs : dict, optional
+            Extra keyword arguments to supply to the ``func`` function.
+
+        Notes
+        -----
+
+        Increments the parameter and feature offset indices.
+        Accumulates into the y-vector or attenuation-vector only over
+        the valid range(s), if validity is set for the current
+        feature.
         """
         cp = self.features[self.f_off]['const_prof']
         nvr = self.features[self.f_off]['nvranges']
@@ -227,6 +254,23 @@ class PAHFITParams:
                     vec[low:high] += func(self.wavelength[low:high], *params)
                     self.v_off += 2
 
+    def compute_tie_sums(self, indep):
+        """Recompute numerator and denominator sums for all
+        non-trivial ties.  Note that one-to-many ratio constraints
+        only require (or use) a *denominator* sum.
+        """
+        for i in range(self.tied.size):
+            start = self.tied[i]['start']
+            n_num = self.tied[i]['count_num']
+            if n_num > 1:  # a many-to-* tie
+                self.tied[i]['sum_num'] = 0.0
+                for p in range(start, start + self.tied[i]['count_num']):
+                    self.tied[i]['sum_num'] += self.get_par(self.tie_groups[p], indep)
+                start += n_num  # Move on to denominators
+            self.tied[i]['sum_denom'] = 0.0
+            for p in range(start, start + self.tied[i]['count_denom']):
+                self.tied[i]['sum_denom'] += self.get_par(self.tie_groups[p], indep)
+
 
 @pahfit_jit
 def _pahfit_params(wavelength, features, params, indep, fixed,
@@ -234,6 +278,5 @@ def _pahfit_params(wavelength, features, params, indep, fixed,
                    validity=None, const_profile=None,
                    tied=None, tie_groups=None):
     """Simple convenience wrapper to create a :class:PAHFITParams
-    parameter map based from input np.ndarray's."""
+    parameter map based from input np.ndarrays."""
     return PAHFITParams()  # This will cache the jitclass!
-
