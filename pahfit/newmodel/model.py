@@ -4,7 +4,7 @@ PAHFIT optimized model object function.
 
 #from typing import ParamSpecKwargs
 import numpy as np
-from const import geometry
+from const import geometry, param_type, validity_gaussian_fwhms
 from .params import PAHFITParams
 from .components import modified_blackbody, blackbody, drude, gaussian
 from .pfnumba import pahfit_jit

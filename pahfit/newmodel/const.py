@@ -14,6 +14,12 @@ validity_gaussian_fwhms = 2.25  # = 5.3 sigma
 # have a validity range
 #  validity_drude_fwhms = 50
 
+
+# Parameter type
+class param_type(IntEnum):
+    independent = -2
+    fixed = -1
+
 # Attenuation/absorption geometry type
 class geometry(IntEnum):
     mixed = 0

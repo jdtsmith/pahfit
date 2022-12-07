@@ -2,9 +2,8 @@
 """Parameter structure for PAHFIT model fit"""
 
 # https://numba.discourse.group/t/best-practices-for-complex-structured-input/1406
-
 import numpy as np
-from const import geometry
+from const import geometry, param_type
 from pahfit.features import Features
 from pahfit.features.util import (bounded_is_fixed, bounded_is_missing,
                                   bounded_min, bounded_max)
@@ -14,9 +13,6 @@ from .pfnumba import jitclass, pahfit_jit, using_numba
 from .const import validity_gaussian_fwhms
 
 # * Variables
-TYPE_INDEP = -2
-TYPE_FIXED = -1
-
 _feature_dtype = np.dtype([('const_prof', np.int32), ('nvranges', np.int32)])
 _params_dtype = np.dtype([('type', np.int32), ('ind', np.int32)])
 _tied_dtype = np.dtype([('ind', np.int32), ('start', np.int32),
@@ -228,7 +224,7 @@ class PAHFITParams:
         vec = self.atten_curve if attenuation else self.y
 
         if cp > 0:  # Constant, pre-computed profile
-            if self.params[self.p_off]['type'] == TYPE_FIXED:  # FIXED amplitude
+            if self.params[self.p_off]['type'] == param_type.fixed:  # FIXED amplitude
                 amp = 1.
                 self.p_off += 1  # It's precomputed, skip it
             else:  # non-fixed: single parameter is an amplitude
