@@ -52,8 +52,9 @@ def modified_blackbody(lam, tau, T):
 #
 # But there is one more important detail.  During the fit, amplitudes
 # A are varied so as to match an implicit *f_nu* comparison spectrum
-# (due to the mixed IR unit convention).  The fitted amplitude is
-# therefore of the A_nu variety.
+# (due to the mixed IR unit convention), at position lam_0.  The
+# fitted amplitude is therefore of the A_nu variety, not the (desired)
+# A_lam.
 #
 # Since:
 #
@@ -64,8 +65,9 @@ def modified_blackbody(lam, tau, T):
 #
 #   P = A_nu c/lam_0^2 * fwhm/2 * (pi, sqrt(pi/ln(2)))
 #
-# Note that a feature of precisely the same width and (f_nu) amplitude
-# has a smaller amount of power at longer wavelengths!
+# Note: a feature of precisely the same width and (f_nu) amplitude
+# has a smaller amount of power when it appears at a longer
+# wavelength!
 #
 # --------------------------------------------------------------------
 #   SCALED POWER
