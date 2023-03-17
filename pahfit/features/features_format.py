@@ -20,8 +20,9 @@ def fmt_func(fmt):
 
 
 class BoundedMaskedColumn(MaskedColumn):
-    """Masked column which groups rows into a single item for formatting.
-    To be set as Table's `MaskedColumn'.
+    """Masked column which logically groups composite elements into a
+    single item for formatting purposes.  To be set as Table's
+    `MaskedColumn'.
     """
 
     _omit_shape = False
