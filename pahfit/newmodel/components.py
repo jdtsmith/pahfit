@@ -65,9 +65,11 @@ def modified_blackbody(lam, tau, T):
 #
 #   P = A_nu c/lam_0^2 * fwhm/2 * (pi, sqrt(pi/ln(2)))
 #
-# Note: a feature of precisely the same width and (f_nu) amplitude
-# has a smaller amount of power when it appears at a longer
-# wavelength!
+# Note: a feature of precisely the same width and (f_nu) amplitude has
+# a smaller amount of power when it appears at a longer wavelength!
+# Our Drude formulation reflects these mixed units, just as would
+# expressing the Blackbody function per unit frequency in terms of
+# wavelength B_nu(lambda).
 #
 # --------------------------------------------------------------------
 #   SCALED POWER
